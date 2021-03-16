@@ -3,12 +3,20 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
+	"os"
 	"strings"
 )
 
 var onlineConns map[string]net.Conn
 var messageQue = make(chan string, 100)
+var logFile *os.File
+var logger *log.Logger
+
+const (
+	LOG_DIRECTORY = "./log.log"
+)
 
 func handle(conn net.Conn) {
 	buf := make([]byte, 1024)
@@ -70,6 +78,15 @@ func ProcessConsumer() {
 }
 
 func main() {
+	logFile, err := os.OpenFile(LOG_DIRECTORY, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("log file create failure")
+		os.Exit(-1)
+	}
+	defer logFile.Close()
+
+	logger = log.New(logFile, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
+
 	onlineConns = make(map[string]net.Conn)
 	listen, err := net.Listen("tcp", "127.0.0.1:8080")
 	if err != nil {
@@ -80,6 +97,8 @@ func main() {
 	defer listen.Close()
 
 	fmt.Println("server is waiting!")
+
+	logger.Println("server is waiting")
 
 	go ProcessConsumer()
 	for {
